@@ -2,6 +2,12 @@
 
 All notable changes to claude-honcho will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Per-host `apiKey` field in `hosts.<name>` — takes precedence over root `apiKey`, still overridden by `HONCHO_API_KEY` env var. Lets different integrations authenticate against different Honcho orgs from one config file.
+
 ## [0.2.4] - 2026-04-01
 
 ### Added
