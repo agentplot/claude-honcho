@@ -118,24 +118,24 @@ export async function handleUserPrompt(): Promise<void> {
 
   const honcho = new Honcho(getHonchoClientOptions(config));
 
-  // Write user prompt directly to Honcho (fire-and-forget).
-  // Mirrors PostToolUse/Stop. No queue, no SessionEnd flush.
+  // Best-effort upload. Wrap the entire SDK interaction so a transient
+  // rejection during session/peer setup can't abort context retrieval below.
   if (config.saveMessages !== false) {
-    const [session, userPeer] = await Promise.all([
-      honcho.session(sessionName),
-      honcho.peer(config.peerName),
-    ]);
-    const chunks = chunkContent(prompt);
-    const messages = chunks.map((chunk) =>
-      userPeer.message(chunk, {
-        metadata: {
-          instance_id: instanceId || undefined,
-          session_affinity: sessionName,
-        },
-      })
-    );
-    logApiCall("session.addMessages", "POST", `user prompt (${prompt.length} chars)`);
     try {
+      const [session, userPeer] = await Promise.all([
+        honcho.session(sessionName),
+        honcho.peer(config.peerName),
+      ]);
+      const chunks = chunkContent(prompt);
+      const messages = chunks.map((chunk) =>
+        userPeer.message(chunk, {
+          metadata: {
+            instance_id: instanceId || undefined,
+            session_affinity: sessionName,
+          },
+        })
+      );
+      logApiCall("session.addMessages", "POST", `user prompt (${prompt.length} chars)`);
       await session.addMessages(messages);
     } catch (e) {
       logHook("user-prompt", `Upload failed: ${e}`);
