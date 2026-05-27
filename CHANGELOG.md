@@ -2,6 +2,12 @@
 
 All notable changes to claude-honcho will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Version-update nag: warns on first prompt when the installed plugin is behind the published version (checks for updates at most once a day; silent on failure).
+
 ## [0.2.4] - 2026-04-01
 
 ### Added
