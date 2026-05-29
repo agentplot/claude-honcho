@@ -1,17 +1,18 @@
-import { homedir } from "os";
 import { join } from "path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
-import { getContextRefreshConfig, getLocalContextConfig } from "./config.js";
+import { getConfigDir, getContextRefreshConfig, getLocalContextConfig } from "./config.js";
 
-const CACHE_DIR = join(homedir(), ".honcho");
-const ID_CACHE_FILE = join(CACHE_DIR, "cache.json");
-const CONTEXT_CACHE_FILE = join(CACHE_DIR, "context-cache.json");
-const CLAUDE_CONTEXT_FILE = join(CACHE_DIR, "claude-context.md");
+// Lazy paths so HONCHO_CONFIG_DIR changes between processes are respected.
+const cacheFile = (name: string) => join(getConfigDir(), name);
+const idCacheFile = () => cacheFile("cache.json");
+const contextCacheFile = () => cacheFile("context-cache.json");
+const claudeContextFile = () => cacheFile("claude-context.md");
 
 // Ensure cache directory exists
 function ensureCacheDir(): void {
-  if (!existsSync(CACHE_DIR)) {
-    mkdirSync(CACHE_DIR, { recursive: true });
+  const dir = getConfigDir();
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
 }
 
@@ -28,11 +29,11 @@ interface IdCache {
 
 export function loadIdCache(): IdCache {
   ensureCacheDir();
-  if (!existsSync(ID_CACHE_FILE)) {
+  if (!existsSync(idCacheFile())) {
     return {};
   }
   try {
-    return JSON.parse(readFileSync(ID_CACHE_FILE, "utf-8"));
+    return JSON.parse(readFileSync(idCacheFile(), "utf-8"));
   } catch {
     return {};
   }
@@ -40,7 +41,7 @@ export function loadIdCache(): IdCache {
 
 export function saveIdCache(cache: IdCache): void {
   ensureCacheDir();
-  writeFileSync(ID_CACHE_FILE, JSON.stringify(cache, null, 2));
+  writeFileSync(idCacheFile(), JSON.stringify(cache, null, 2));
 }
 
 export function getCachedWorkspaceId(workspaceName: string): string | null {
@@ -142,11 +143,11 @@ const CONTEXT_CACHE_KNOWN_KEYS = new Set([
 
 export function loadContextCache(): ContextCache {
   ensureCacheDir();
-  if (!existsSync(CONTEXT_CACHE_FILE)) {
+  if (!existsSync(contextCacheFile())) {
     return {};
   }
   try {
-    const raw = JSON.parse(readFileSync(CONTEXT_CACHE_FILE, "utf-8"));
+    const raw = JSON.parse(readFileSync(contextCacheFile(), "utf-8"));
     // Strip ghost keys left by older plugin versions (e.g. "aiContext")
     let cleaned = false;
     for (const key of Object.keys(raw)) {
@@ -156,7 +157,7 @@ export function loadContextCache(): ContextCache {
       }
     }
     if (cleaned) {
-      writeFileSync(CONTEXT_CACHE_FILE, JSON.stringify(raw, null, 2));
+      writeFileSync(contextCacheFile(), JSON.stringify(raw, null, 2));
     }
     return raw;
   } catch {
@@ -166,7 +167,7 @@ export function loadContextCache(): ContextCache {
 
 export function saveContextCache(cache: ContextCache): void {
   ensureCacheDir();
-  writeFileSync(CONTEXT_CACHE_FILE, JSON.stringify(cache, null, 2));
+  writeFileSync(contextCacheFile(), JSON.stringify(cache, null, 2));
 }
 
 export function getCachedUserContext(): any | null {
@@ -249,16 +250,16 @@ export function resetMessageCount(): void {
 // ============================================
 
 export function getClaudeContextPath(): string {
-  return CLAUDE_CONTEXT_FILE;
+  return claudeContextFile();
 }
 
 export function loadClaudeLocalContext(): string {
   ensureCacheDir();
-  if (!existsSync(CLAUDE_CONTEXT_FILE)) {
+  if (!existsSync(claudeContextFile())) {
     return "";
   }
   try {
-    return readFileSync(CLAUDE_CONTEXT_FILE, "utf-8");
+    return readFileSync(claudeContextFile(), "utf-8");
   } catch {
     return "";
   }
@@ -266,7 +267,7 @@ export function loadClaudeLocalContext(): string {
 
 export function saveClaudeLocalContext(content: string): void {
   ensureCacheDir();
-  writeFileSync(CLAUDE_CONTEXT_FILE, content);
+  writeFileSync(claudeContextFile(), content);
 }
 
 export function appendClaudeWork(workDescription: string): void {
@@ -344,7 +345,7 @@ Session: ${sessionName}
 // Git State Cache - track git state per directory
 // ============================================
 
-const GIT_STATE_FILE = join(CACHE_DIR, "git-state.json");
+const gitStateFile = () => cacheFile("git-state.json");
 
 export interface GitState {
   branch: string;
@@ -361,11 +362,11 @@ interface GitStateCache {
 
 export function loadGitStateCache(): GitStateCache {
   ensureCacheDir();
-  if (!existsSync(GIT_STATE_FILE)) {
+  if (!existsSync(gitStateFile())) {
     return {};
   }
   try {
-    return JSON.parse(readFileSync(GIT_STATE_FILE, "utf-8"));
+    return JSON.parse(readFileSync(gitStateFile(), "utf-8"));
   } catch {
     return {};
   }
@@ -373,7 +374,7 @@ export function loadGitStateCache(): GitStateCache {
 
 export function saveGitStateCache(cache: GitStateCache): void {
   ensureCacheDir();
-  writeFileSync(GIT_STATE_FILE, JSON.stringify(cache, null, 2));
+  writeFileSync(gitStateFile(), JSON.stringify(cache, null, 2));
 }
 
 export function getCachedGitState(cwd: string): GitState | null {
@@ -492,16 +493,16 @@ export function chunkContent(content: string, maxSize: number = MAX_MESSAGE_SIZE
 
 export function clearAllCaches(): void {
   ensureCacheDir();
-  if (existsSync(ID_CACHE_FILE)) writeFileSync(ID_CACHE_FILE, "{}");
-  if (existsSync(CONTEXT_CACHE_FILE)) writeFileSync(CONTEXT_CACHE_FILE, "{}");
-  if (existsSync(GIT_STATE_FILE)) writeFileSync(GIT_STATE_FILE, "{}");
+  if (existsSync(idCacheFile())) writeFileSync(idCacheFile(), "{}");
+  if (existsSync(contextCacheFile())) writeFileSync(contextCacheFile(), "{}");
+  if (existsSync(gitStateFile())) writeFileSync(gitStateFile(), "{}");
   // Don't clear claude-context.md - that's valuable history
 }
 
 /** Clear only the ID cache (workspace, peer, session IDs) */
 export function clearIdCache(): void {
   ensureCacheDir();
-  writeFileSync(ID_CACHE_FILE, "{}");
+  writeFileSync(idCacheFile(), "{}");
 }
 
 /** Clear only peer IDs from the ID cache */

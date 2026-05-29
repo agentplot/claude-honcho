@@ -11,7 +11,7 @@
  */
 
 import { arrows, symbols } from "./unicode.js";
-import { isLoggingEnabled } from "./config.js";
+import { getConfigDir, isLoggingEnabled } from "./config.js";
 
 // Plain text (no ANSI) for systemMessage — shown in Claude Code's UI
 const sym = {
@@ -101,14 +101,13 @@ export function addSystemMessage(existingJson: any, message: string): any {
 // printing verbose data to stdout instead — use formatVerboseBlock().
 // ============================================
 
-import { homedir } from "os";
 import { join } from "path";
 import { appendFileSync, mkdirSync, existsSync, writeFileSync } from "fs";
 
-const VERBOSE_LOG = join(homedir(), ".honcho", "verbose.log");
+const verboseLog = () => join(getConfigDir(), "verbose.log");
 
 function ensureVerboseLog(): void {
-  const dir = join(homedir(), ".honcho");
+  const dir = getConfigDir();
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -118,7 +117,7 @@ function writeVerbose(text: string): void {
   if (!isLoggingEnabled()) return;
   ensureVerboseLog();
   const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
-  appendFileSync(VERBOSE_LOG, `[${timestamp}] ${text}\n`);
+  appendFileSync(verboseLog(), `[${timestamp}] ${text}\n`);
 }
 
 /**
@@ -150,14 +149,14 @@ export function verboseList(label: string, items: string[] | null | undefined): 
 export function clearVerboseLog(): void {
   if (!isLoggingEnabled()) return;
   ensureVerboseLog();
-  writeFileSync(VERBOSE_LOG, "");
+  writeFileSync(verboseLog(), "");
 }
 
 /**
  * Get the verbose log path
  */
 export function getVerboseLogPath(): string {
-  return VERBOSE_LOG;
+  return verboseLog();
 }
 
 // ============================================

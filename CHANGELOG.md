@@ -4,6 +4,10 @@ All notable changes to claude-honcho will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `HONCHO_CONFIG_DIR` environment variable redirects the plugin's runtime state directory (`config.json`, ID/context caches, `claude-context.md`, `activity.log`, `verbose.log`). Defaults to `~/.honcho`. Mirrors Claude Code's `CLAUDE_CONFIG_DIR` so users running multiple side-by-side Claude profiles can keep each partition's Honcho state isolated.
+
 ### Changed
 
 - User prompts are now written to Honcho in real time on `UserPromptSubmit` instead of being queued for `SessionEnd` flush. Mirrors the existing fire-and-forget pattern used by `PostToolUse` and `Stop`.

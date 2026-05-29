@@ -17,7 +17,8 @@ Check if `HONCHO_API_KEY` is set as an environment variable OR if `~/.honcho/con
 bun -e "
 const fs = require('fs');
 const path = require('path');
-const configPath = path.join(require('os').homedir(), '.honcho', 'config.json');
+const configDir = process.env.HONCHO_CONFIG_DIR || path.join(require('os').homedir(), '.honcho');
+const configPath = path.join(configDir, 'config.json');
 const envKey = process.env.HONCHO_API_KEY;
 let configKey = '';
 try { configKey = JSON.parse(fs.readFileSync(configPath, 'utf-8')).apiKey || ''; } catch {}

@@ -244,19 +244,22 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
-const CONFIG_DIR = join(homedir(), ".honcho");
-const CONFIG_FILE = join(CONFIG_DIR, "config.json");
-
+/**
+ * Resolve the runtime state directory for the plugin.
+ * Honors HONCHO_CONFIG_DIR (mirrors Claude Code's CLAUDE_CONFIG_DIR) so users
+ * running multiple Claude profiles can keep each partition's config, cache,
+ * context, and logs in a separate tree. Defaults to ~/.honcho.
+ */
 export function getConfigDir(): string {
-  return CONFIG_DIR;
+  return process.env.HONCHO_CONFIG_DIR || join(homedir(), ".honcho");
 }
 
 export function getConfigPath(): string {
-  return CONFIG_FILE;
+  return join(getConfigDir(), "config.json");
 }
 
 export function configExists(): boolean {
-  return existsSync(CONFIG_FILE);
+  return existsSync(getConfigPath());
 }
 
 /**
@@ -268,7 +271,7 @@ export function loadConfig(host?: HonchoHost): HonchoCLAUDEConfig | null {
 
   if (configExists()) {
     try {
-      const content = readFileSync(CONFIG_FILE, "utf-8");
+      const content = readFileSync(getConfigPath(), "utf-8");
       const raw = JSON.parse(content) as HonchoFileConfig;
       return resolveConfig(raw, resolvedHost);
     } catch {
@@ -418,15 +421,17 @@ function mergeWithEnvVars(config: HonchoCLAUDEConfig): HonchoCLAUDEConfig {
  * user's root-level defaults still apply until overridden per-host.
  */
 export function saveConfig(config: HonchoCLAUDEConfig): void {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+  const configDir = getConfigDir();
+  const configFile = getConfigPath();
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
   }
 
   // Re-read from disk to avoid clobbering other tools' changes
   let existing: HonchoFileConfig = {};
-  if (existsSync(CONFIG_FILE)) {
+  if (existsSync(configFile)) {
     try {
-      existing = JSON.parse(readFileSync(CONFIG_FILE, "utf-8"));
+      existing = JSON.parse(readFileSync(configFile, "utf-8"));
     } catch {
       // Start fresh if corrupt
     }
@@ -489,7 +494,7 @@ export function saveConfig(config: HonchoCLAUDEConfig): void {
 
   existing.hosts[host] = hostEntry;
 
-  writeFileSync(CONFIG_FILE, JSON.stringify(existing, null, 2));
+  writeFileSync(configFile, JSON.stringify(existing, null, 2));
 }
 
 /**
@@ -499,19 +504,21 @@ export function saveConfig(config: HonchoCLAUDEConfig): void {
  * Hooks and routine operations must NEVER call this.
  */
 export function saveRootField(field: string, value: unknown): void {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+  const configDir = getConfigDir();
+  const configFile = getConfigPath();
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
   }
 
   let existing: Record<string, unknown> = {};
-  if (existsSync(CONFIG_FILE)) {
+  if (existsSync(configFile)) {
     try {
-      existing = JSON.parse(readFileSync(CONFIG_FILE, "utf-8"));
+      existing = JSON.parse(readFileSync(configFile, "utf-8"));
     } catch {}
   }
 
   existing[field] = value;
-  writeFileSync(CONFIG_FILE, JSON.stringify(existing, null, 2));
+  writeFileSync(configFile, JSON.stringify(existing, null, 2));
 }
 
 export function getClaudeSettingsPath(): string {

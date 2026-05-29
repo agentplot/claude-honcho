@@ -424,6 +424,20 @@ Environment variables work for initial bootstrap (before a config file exists). 
 | `HONCHO_ENABLED`       | No       | `true`        | Set to `false` to disable                                         |
 | `HONCHO_SAVE_MESSAGES` | No       | `true`        | Set to `false` to stop saving messages                            |
 | `HONCHO_LOGGING`       | No       | `true`        | Set to `false` to disable file logging to `~/.honcho/`            |
+| `HONCHO_CONFIG_DIR`    | No       | `~/.honcho`   | Redirect the plugin's runtime state directory (config + cache + context + logs). Mirrors Claude Code's `CLAUDE_CONFIG_DIR`. |
+
+### Multiple Profiles
+
+If you run several Claude Code profiles side-by-side via `CLAUDE_CONFIG_DIR` (e.g. one per client or confidentiality boundary), set `HONCHO_CONFIG_DIR` per profile so each gets its own isolated `config.json`, ID/context caches, `claude-context.md`, and log files. The simplest place is each profile's `settings.json` `env` block:
+
+```jsonc
+// ~/.claude-business/settings.json
+{
+  "env": { "HONCHO_CONFIG_DIR": "/Users/you/.honcho-business" }
+}
+```
+
+Each profile then writes to and reads from its own `~/.honcho-<profile>/` tree — no cross-profile leak of cached IDs, `claude-context.md`, or session lists.
 
 ## How It Works
 
